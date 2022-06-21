@@ -1,7 +1,6 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-class DropDown {
+class DropDown<T> {
   /// This gives the button text or it sets default text as 'click me'.
   final String? buttonText;
 
@@ -23,20 +22,18 @@ class DropDown {
   /// This will give the default search controller to the search text field.
   final TextEditingController searchController;
 
-  /// This will give the list of data.
-  final List<SelectedListItem> dataList;
-
   /// This will give the call back to the selected items (multiple) from list.
-  final Function(List<dynamic>)? selectedItems;
+  final Function(List<T>)? selectedItems;
 
   /// This will give the call back to the selected item (single) from list.
-  final Function(String)? selectedItem;
-
-  /// This will give the call back to the selected item (single) from list.
-  final Function(String)? selectedItemValue;
+  final Function(T)? selectedItemValue;
 
   /// This will give selection choise for single or multiple for list.
   final bool enableMultipleSelection;
+
+  final void Function(BuildContext context, int index)? listItemBuildListener;
+
+  final Stream<List<SelectedListItem<T>>> stream;
 
   DropDown({
     Key? key,
@@ -47,16 +44,16 @@ class DropDown {
     this.searchHintText,
     this.searchBackgroundColor,
     required this.searchController,
-    required this.dataList,
     this.selectedItems,
-    this.selectedItem,
     this.selectedItemValue,
     required this.enableMultipleSelection,
+    this.listItemBuildListener,
+    required this.stream,
   });
 }
 
-class DropDownState {
-  DropDown dropDown;
+class DropDownState<T> {
+  DropDown<T> dropDown;
   DropDownState(this.dropDown);
 
   /// This gives the bottom sheet widget.
@@ -70,7 +67,7 @@ class DropDownState {
       builder: (context) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setState) {
-            return MainBody(
+            return MainBody<T>(
               dropDown: dropDown,
             );
           },
@@ -81,34 +78,34 @@ class DropDownState {
 }
 
 /// This is Model class. Using this model class, you can add the list of data with title and its selection.
-class SelectedListItem {
+class SelectedListItem<T> {
   bool isSelected;
-  String name;
-  String id;
-  String? value;
-  final Function(String)? onTap;
+  final String name;
+  final String id;
+  final T value;
+  final Function(T)? onTap;
 
-  SelectedListItem(this.isSelected, this.name, this.id,{this.value, this.onTap});
+  SelectedListItem(this.isSelected, this.name, this.id,
+      {required this.value, this.onTap});
 }
 
 /// This is main class to display the bottom sheet body.
-class MainBody extends StatefulWidget {
-  DropDown dropDown;
+class MainBody<T> extends StatefulWidget {
+  final DropDown<T> dropDown;
 
-  MainBody({required this.dropDown, Key? key}) : super(key: key);
+  const MainBody({required this.dropDown, Key? key}) : super(key: key);
 
   @override
-  State<MainBody> createState() => _MainBodyState();
+  State<MainBody> createState() => _MainBodyState<T>();
 }
 
-class _MainBodyState extends State<MainBody> {
+class _MainBodyState<T> extends State<MainBody<T>> {
   /// This list will set when the list of data is not available.
-  List<SelectedListItem> mainList = [];
+  List<SelectedListItem<T>> mainList = [];
 
   @override
   void initState() {
     super.initState();
-    mainList = widget.dropDown.dataList;
   }
 
   @override
@@ -144,18 +141,16 @@ class _MainBodyState extends State<MainBody> {
                       alignment: Alignment.centerRight,
                       child: ElevatedButton(
                           onPressed: () {
-                            List<SelectedListItem> selectedList = widget
-                                .dropDown.dataList
+                            List<SelectedListItem<T>> selectedList = mainList
                                 .where((element) => element.isSelected == true)
                                 .toList();
-                            List<String> selectedNameList = [];
+                            List<T> selectedItems = [];
 
                             for (var element in selectedList) {
-                              selectedNameList.add(element.value ??  element.name);
+                              selectedItems.add(element.value);
                             }
 
-                            widget.dropDown.selectedItems
-                                ?.call(selectedNameList);
+                            widget.dropDown.selectedItems?.call(selectedItems);
                             _onUnfocusKeyboardAndPop();
                           },
                           style: ElevatedButton.styleFrom(
@@ -183,55 +178,65 @@ class _MainBodyState extends State<MainBody> {
 
             /// Listview (list of data with check box for multiple selection & on tile tap single selection)
             Expanded(
-              child: ListView.builder(
-                controller: scrollController,
-                itemCount: mainList.length,
-                itemBuilder: (context, index) {
-                  return InkWell(
-                    child: Container(
-                      // color: Colors.white,
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
-                        child: ListTile(
-                          title: Text(
-                            mainList[index].name,
-                          ),
-                          trailing: widget.dropDown.enableMultipleSelection
-                              ? GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      mainList[index].isSelected =
-                                          !mainList[index].isSelected;
-                                    });
-                                  },
-                                  child: mainList[index].isSelected
-                                      ? const Icon(Icons.check_box)
-                                      : const Icon(
-                                          Icons.check_box_outline_blank),
-                                )
-                              : const SizedBox(
-                                  height: 0.0,
-                                  width: 0.0,
+              child: StreamBuilder<List<SelectedListItem<T>>>(
+                  stream: widget.dropDown.stream,
+                  builder: (context, snapshot) {
+                    final mainList = snapshot.data ?? [];
+                    this.mainList.clear();
+                    this.mainList.addAll(mainList);
+                    return ListView.builder(
+                      controller: scrollController,
+                      itemCount: mainList.length,
+                      itemBuilder: (context, index) {
+                        if (widget.dropDown.listItemBuildListener != null) {
+                          widget.dropDown.listItemBuildListener!(
+                              context, index);
+                        }
+                        return InkWell(
+                          child: Container(
+                            // color: Colors.white,
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+                              child: ListTile(
+                                title: Text(
+                                  mainList[index].name,
                                 ),
-                        ),
-                      ),
-                    ),
-                    onTap: widget.dropDown.enableMultipleSelection
-                        ? null
-                        : () {
-                            widget.dropDown.selectedItem
-                                ?.call(
-                              (mainList[index].name)
-                            );
-                            widget.dropDown.selectedItemValue
-                                ?.call(
-                                (mainList[index].id)
-                            );
-                            _onUnfocusKeyboardAndPop();
-                          },
-                  );
-                },
-              ),
+                                trailing: widget
+                                        .dropDown.enableMultipleSelection
+                                    ? GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            mainList[index].isSelected =
+                                                !mainList[index].isSelected;
+                                          });
+                                        },
+                                        child: mainList[index].isSelected
+                                            ? const Icon(Icons.check_box)
+                                            : const Icon(
+                                                Icons.check_box_outline_blank),
+                                      )
+                                    : const SizedBox(
+                                        height: 0.0,
+                                        width: 0.0,
+                                      ),
+                              ),
+                            ),
+                          ),
+                          onTap: widget.dropDown.enableMultipleSelection
+                              ? null
+                              : () {
+                                  // widget.dropDown.selectedItem
+                                  //     ?.call(
+                                  //   (mainList[index].name)
+                                  // );
+                                  widget.dropDown.selectedItemValue
+                                      ?.call((mainList[index].value));
+                                  _onUnfocusKeyboardAndPop();
+                                },
+                        );
+                      },
+                    );
+                  }),
             ),
           ],
         );
@@ -241,23 +246,23 @@ class _MainBodyState extends State<MainBody> {
 
   /// This helps when search enabled & show the filtered data in list.
   _buildSearchList(String userSearchTerm) {
-    final results = widget.dropDown.dataList
-        .where((element) =>
-            element.name.toLowerCase().contains(userSearchTerm.toLowerCase()))
-        .toList();
-    if (userSearchTerm.isEmpty) {
-      mainList = widget.dropDown.dataList;
-    } else {
-      mainList = results;
-    }
-    setState(() {});
+    // final results = widget.dropDown.dataList
+    //     .where((element) =>
+    //         element.name.toLowerCase().contains(userSearchTerm.toLowerCase()))
+    //     .toList();
+    // if (userSearchTerm.isEmpty) {
+    //   mainList = widget.dropDown.dataList;
+    // } else {
+    //   mainList = results;
+    // }
+    // setState(() {});
   }
 
   /// This helps when want to clear text in search text field.
   void _onClearTap() {
-    widget.dropDown.searchController.clear();
-    mainList = widget.dropDown.dataList;
-    setState(() {});
+    // widget.dropDown.searchController.clear();
+    // mainList = widget.dropDown.dataList;
+    // setState(() {});
   }
 
   /// This helps to unfocus the keyboard & pop from the bottom sheet.
