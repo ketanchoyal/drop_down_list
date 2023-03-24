@@ -102,6 +102,7 @@ class MainBody<T> extends StatefulWidget {
 class _MainBodyState<T> extends State<MainBody<T>> {
   /// This list will set when the list of data is not available.
   List<SelectedListItem<T>> mainList = [];
+  String _searchString = '';
 
   @override
   void initState() {
@@ -154,8 +155,9 @@ class _MainBodyState<T> extends State<MainBody<T>> {
                             _onUnfocusKeyboardAndPop();
                           },
                           style: ElevatedButton.styleFrom(
-                            primary: widget.dropDown.submitButtonColor ??
-                                Colors.blue,
+                            backgroundColor:
+                                widget.dropDown.submitButtonColor ??
+                                    Colors.blue,
                             textStyle: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -191,6 +193,15 @@ class _MainBodyState<T> extends State<MainBody<T>> {
                         if (widget.dropDown.listItemBuildListener != null) {
                           widget.dropDown.listItemBuildListener!(
                               context, index);
+                        }
+                        if (!mainList[index]
+                            .name
+                            .toLowerCase()
+                            .contains(_searchString.toLowerCase())) {
+                          return const SizedBox(
+                            height: 0.0,
+                            width: 0.0,
+                          );
                         }
                         return InkWell(
                           child: Container(
@@ -246,23 +257,15 @@ class _MainBodyState<T> extends State<MainBody<T>> {
 
   /// This helps when search enabled & show the filtered data in list.
   _buildSearchList(String userSearchTerm) {
-    // final results = widget.dropDown.dataList
-    //     .where((element) =>
-    //         element.name.toLowerCase().contains(userSearchTerm.toLowerCase()))
-    //     .toList();
-    // if (userSearchTerm.isEmpty) {
-    //   mainList = widget.dropDown.dataList;
-    // } else {
-    //   mainList = results;
-    // }
-    // setState(() {});
+    _searchString = userSearchTerm;
+    setState(() {});
   }
 
   /// This helps when want to clear text in search text field.
   void _onClearTap() {
-    // widget.dropDown.searchController.clear();
-    // mainList = widget.dropDown.dataList;
-    // setState(() {});
+    widget.dropDown.searchController.clear();
+    _searchString = '';
+    setState(() {});
   }
 
   /// This helps to unfocus the keyboard & pop from the bottom sheet.
