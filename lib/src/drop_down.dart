@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class DropDown<T> {
+class DropDown<T extends SearchableItem> {
   /// This gives the button text or it sets default text as 'click me'.
   final String? buttonText;
 
@@ -52,7 +52,7 @@ class DropDown<T> {
   });
 }
 
-class DropDownState<T> {
+class DropDownState<T extends SearchableItem> {
   DropDown<T> dropDown;
   DropDownState(this.dropDown);
 
@@ -77,8 +77,12 @@ class DropDownState<T> {
   }
 }
 
+abstract class SearchableItem {
+  List<String> get searchableStrings;
+}
+
 /// This is Model class. Using this model class, you can add the list of data with title and its selection.
-class SelectedListItem<T> {
+class SelectedListItem<T extends SearchableItem> {
   bool isSelected;
   final String name;
   final String id;
@@ -90,7 +94,7 @@ class SelectedListItem<T> {
 }
 
 /// This is main class to display the bottom sheet body.
-class MainBody<T> extends StatefulWidget {
+class MainBody<T extends SearchableItem> extends StatefulWidget {
   final DropDown<T> dropDown;
 
   const MainBody({required this.dropDown, Key? key}) : super(key: key);
@@ -99,7 +103,7 @@ class MainBody<T> extends StatefulWidget {
   State<MainBody> createState() => _MainBodyState<T>();
 }
 
-class _MainBodyState<T> extends State<MainBody<T>> {
+class _MainBodyState<T extends SearchableItem> extends State<MainBody<T>> {
   /// This list will set when the list of data is not available.
   List<SelectedListItem<T>> mainList = [];
   String _searchString = '';
@@ -195,7 +199,9 @@ class _MainBodyState<T> extends State<MainBody<T>> {
                               context, index);
                         }
                         if (!mainList[index]
-                            .name
+                            .value
+                            .searchableStrings
+                            .join(' ')
                             .toLowerCase()
                             .contains(_searchString.toLowerCase())) {
                           return const SizedBox(
