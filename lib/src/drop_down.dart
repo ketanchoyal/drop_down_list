@@ -283,11 +283,11 @@ class _MainBodyState<T extends SearchableItem> extends State<MainBody<T>> {
 
 /// This is search text field class.
 class _AppTextField extends StatefulWidget {
-  DropDown dropDown;
-  Function(String) onTextChanged;
-  VoidCallback onClearTap;
+  final DropDown dropDown;
+  final Function(String) onTextChanged;
+  final VoidCallback onClearTap;
 
-  _AppTextField(
+  const _AppTextField(
       {required this.dropDown,
       required this.onTextChanged,
       required this.onClearTap,
